@@ -4,11 +4,15 @@
     </div>
     <div class="card-body">
         
-        <div id="loading-indicator" class="alert alert-info text-center" style="display: none;">
+        <div class="alert alert-info text-center" ng-if="!historiales">
             Cargando tu historial de análisis...
         </div>
         
-        <div class="table-responsive">
+        <div class="alert alert-warning text-center" ng-if="historiales && historiales.length === 0">
+            Aún no tienes análisis registrados. ¡Es hora de generar uno nuevo!
+        </div>
+        
+        <div class="table-responsive" ng-if="historiales && historiales.length > 0">
             <table class="table table-hover table-sm" id="tablaHistorialAnalisis">
                 <thead class="table-primary">
                     <tr>
@@ -19,8 +23,30 @@
                         <th>Acciones</th>
                     </tr>
                 </thead>
+                
                 <tbody id="tbodyHistorialAnalisis">
-                    </tbody>
+                    <tr ng-repeat="analisis in historiales">
+                        <td>{{ analisis.id_analysis }}</td>
+                        
+                        <td>{{ analisis.analysis_date | date:'dd/MM/yyyy HH:mm' }}</td>
+                        
+                        <td>{{ analisis.tipo_analisis }}</td>
+                        
+                        <td>
+                            <span class="badge bg-success" ng-if="analisis.status == 'COMPLETED'">Completado</span>
+                            <span class="badge bg-warning" ng-if="analisis.status == 'PENDING'">Pendiente</span>
+                            <span class="badge bg-danger" ng-if="analisis.status == 'ERROR'">Error</span>
+                        </td>
+                        
+                        <td>
+                            <button 
+                                class="btn btn-sm btn-info"
+                                ng-click="viewDetails(analisis.id_analysis)">
+                                Ver Recomendación
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </div>

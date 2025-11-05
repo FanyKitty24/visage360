@@ -17,22 +17,11 @@ app.config(function ($routeProvider, $locationProvider) {
         templateUrl: "/app",
         controller: "appCtrl"
     })
-    .when("/empleados", {
-        templateUrl: "/empleados",
-        controller: "empleadosCtrl"
+      .when("/historialanalisis", {
+        templateUrl: "/historialanalisis",
+        controller: "historialanalisisCtrl"
     })
-    .when("/asistencias", {
-        templateUrl: "/asistencias",
-        controller: "asistenciasCtrl"
-    })
-    .when("/asistenciaspases", {
-        templateUrl: "/asistenciaspases",
-        controller: "asistenciaspasesCtrl"
-    })
-    .when("/departamentos", {
-        templateUrl: "/departamentos",
-        controller: "departamentosCtrl"
-    })
+
     .otherwise({
         redirectTo: "/"
     })
@@ -85,7 +74,7 @@ app.controller("appCtrl", function ($scope, $http) {
         $.post("/IniciarSesion", $(this).serialize(), function (respuesta) {
             if (respuesta.length) {
                 alert("Iniciaste Sesión")
-                window.location = "/#/empleados"
+                window.location = "/#/usuarios"
                 return
             }
             alert("Usuario y/o Contraseña Incorrecto(s)")
@@ -93,57 +82,12 @@ app.controller("appCtrl", function ($scope, $http) {
     })
 })
 
-// Controlador para Empleados
-app.controller("empleadosCtrl", function ($scope, $http) {
-    function buscarEmpleados() {
-        $.get("/tbodyEmpleados", function (trsHTML) {
-            $("#tbodyEmpleados").html(trsHTML)
-        })
-    }
-    buscarEmpleados()
 
-    // Evento para enviar el formulario (Crea o Actualiza)
-    $(document).on("submit", "#frmEmpleado", function (event) {
-        event.preventDefault();
-        
-        $.post("/empleado", $(this).serialize())
-            .done(function() {
-                buscarEmpleados();
-                
-                // IMPORTANTE: Limpiar el formulario después de guardar.
-                // Esto resetea todos los campos y vacía el ID oculto,
-                // dejando el formulario listo para un nuevo registro.
-                $("#frmEmpleado")[0].reset();
-                $("#idEmpleado").val(""); 
-            })
-            .fail(function(response) {
-                // Muestra un error si algo sale mal en el servidor.
-                alert("Error al guardar: " + response.responseJSON.error);
-            });
-    });
-
-    // Evento para el botón "Editar" (Llena el formulario)
-    $(document).on("click", ".btn-editar-empleado", function () {
-        const id = $(this).data("id");
-        const nombre = $(this).data("nombre");
-        const numero = $(this).data("numero");
-        const fecha = $(this).data("fecha");
-        const idDepartamento = $(this).data("iddepartamento");
-
-        // Llenamos todos los campos del formulario, incluyendo el ID oculto.
-        $("#idEmpleado").val(id);
-        $("#txtNombreEmpleado").val(nombre);
-        $("#txtNumero").val(numero);
-        $("#txtFechaIngreso").val(fecha);
-        $("#selIdDepartamento").val(idDepartamento);
-    });
-});
-
-// Controlador para Asistencias (Dirigida por Eventos)
-app.controller("asistenciasCtrl", function ($scope, $http) {
+// Controlador para Historial Asistencias (Dirigida por Eventos)
+app.controller("historialanalisisCtrl", function ($scope, $http) {
     function buscarAsistencias() {
-        $.get("/tbodyAsistencias", function (trsHTML) {
-            $("#tbodyAsistencias").html(trsHTML);
+        $.get("/tbodyHistorialAnalisis", function (trsHTML) {
+            $("#tbodyHistorialAnalisis").html(trsHTML);
         });
     }
     buscarAsistencias();
@@ -153,13 +97,13 @@ app.controller("asistenciasCtrl", function ($scope, $http) {
     var pusher = new Pusher("686124f7505c58418f23", { // Tu KEY
       cluster: "us2"
     });
-    var channel = pusher.subscribe("canalAsistencias");
-    channel.bind("eventoAsistencias", function(data) {
-        buscarAsistencias();
+    var channel = pusher.subscribe("canalHistorialAnalisis");
+    channel.bind("eventoHistorialAnalisis", function(data) {
+        buscarHistorialAnalisis();
     });
 
     // Botón de Editar
-    $(document).on("click", ".btn-editar-asistencia", function () {
+    $(document).on("click", ".btn-editar-historial-analisis", function () {
         const id = $(this).data("id");
         const fecha = $(this).data("fecha");
         const comentarios = $(this).data("comentarios");
@@ -170,7 +114,7 @@ app.controller("asistenciasCtrl", function ($scope, $http) {
         // CORRECCIÓN: Toda la lógica de edición (incluyendo crear el input oculto)
         // debe estar DENTRO del evento 'click'.
         if ($("#hiddenId").length === 0) {
-            $("#frmAsistencia").append(`<input type="hidden" id="hiddenId" name="idAsistencia">`);
+            $("#frmHistorialAnalisis").append(`<input type="hidden" id="hiddenId" name="id_analysis">`);
         }
         $("#hiddenId").val(id);
     });
@@ -178,12 +122,12 @@ app.controller("asistenciasCtrl", function ($scope, $http) {
     $(document).off("submit", "#frmAsistencia").on("submit", "#frmAsistencia", function (event) {
     event.preventDefault();
     const id = $("#hiddenId").val();
-    const url = id ? "/asistencia/editar" : "/asistencia";
+    const url = id ? "/historialanalisis/editar" : "/analisis";
 
     $.post(url, $(this).serialize())
         .done(function () {
-            buscarAsistencias();
-            $("#frmAsistencia")[0].reset();
+            buscarHistorialAnalisis();
+            $("#frmHistorialAnalisis")[0].reset();
             $("#hiddenId").remove();
         })
         .fail(function () {
@@ -191,51 +135,6 @@ app.controller("asistenciasCtrl", function ($scope, $http) {
         });
     });
 });
-
-// Controlador para AsistenciasPases (N Capas)
-app.controller("asistenciaspasesCtrl", function ($scope, $http) {
-    function buscarAsistenciasPases() {
-        $.get("/tbodyAsistenciasPases", function (trsHTML) {
-            $("#tbodyAsistenciasPases").html(trsHTML)
-        })
-    }
-    buscarAsistenciasPases()
-
-    $(document).on("click", ".btn-eliminar-pase", function (event) {
-        const id = $(this).data("id")
-        // DELETE (ELIMINAR)
-        if (confirm(`¿Estás seguro de eliminar el pase #${id}?`)) {
-            $.post("/asistenciapase/eliminar", { id: id })
-            .done(function() {
-                buscarAsistenciasPases();
-            })
-        }
-    })
-})
-
-//Controlador para departamentos.
-app.controller("departamentosCtrl", function ($scope, $http) {
-    console.log("Se ha iniciado departamentosCtrl")
-
-    function buscarDepartamentos() {
-        $.get("/tbodyDepartamentos", function (trsHTML) {
-            $("#tbodyDepartamentos").html(trsHTML)
-        })
-    }
-    buscarDepartamentos()
-
-    $(document).on("submit", "#frmDepartamento", function (event) {
-        event.preventDefault()
-        $.post("/departamento", $(this).serialize())
-        .done(function () {
-            buscarDepartamentos()
-            $("#frmDepartamento")[0].reset()
-            $("#idDepartamento").val("")
-        })
-    })
-})
-
-
 
 const DateTime = luxon.DateTime
 let lxFechaHora

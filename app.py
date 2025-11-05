@@ -5,28 +5,41 @@ import bcrypt
 import json
 from functools import wraps 
 
-# --- Configuración de la Base de Datos (Adaptar a tus credenciales locales/Render) ---
+# --- Configuración de la Base de Datos (RENDER DEBE USAR VARIABLES DE ENTORNO) ---
 db_config = {
-    "host": "185.232.14.52", 
+    "host": "185.232.14.52", # Usar os.environ.get('DB_HOST') en Render
     "database": "a264133_visage360_db",
     "user": "185.232.14.52",
     "password": "24002200"
 }
 
 app = Flask(__name__)
-# Permitir CORS para desarrollo local entre AngularJS y Flask
 CORS(app) 
 
-# Clave secreta para la gestión de sesiones de Flask (debe ser fuerte)
 app.secret_key = "visage360_clave_secreta_fuerte_abc123"
 
+
+# =========================================================================
+# RUTAS DE VISTAS ESTÁTICAS (SPA ENTRY POINT)
+# ESTO RESUELVE EL ERROR "NOT FOUND" EN RENDER
+# =========================================================================
+
+@app.route("/")
+def render_app():
+    # Sirve el archivo principal index.html (debe estar en la carpeta 'templates/')
+    return render_template("index.html")
+
+@app.route("/vistas/<path:filename>")
+def serve_vistas(filename):
+    # Sirve las vistas parciales solicitadas por AngularJS
+    # ej: templateUrl: "/vistas/login.html"
+    return render_template(f"vistas/{filename}")
 
 
 # =========================================================================
 # FUNCIONES AUXILIARES
 # =========================================================================
 
-# Decorador para proteger rutas de la API (generalmente no necesario en RESTful con JWT)
 def requiere_login_api(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -60,7 +73,6 @@ def IniciarSesionAPI():
         contrasena_ingresada_bytes = contrasena_ingresada.encode('utf-8')
         
         if bcrypt.checkpw(contrasena_ingresada_bytes, hash_guardado):
-            # Respuesta JSON para el Patrón Singleton en AngularJS
             return jsonify({
                 "success": True, 
                 "message": "Inicio de sesión exitoso.",
@@ -79,7 +91,6 @@ def IniciarSesionAPI():
 
 @app.route("/api/historial_analisis/<int:user_id>", methods=["GET"])
 @cross_origin()
-# @requiere_login_api # Se comenta, pero se usaría en producción
 def getHistorialAnalisis(user_id):
     
     con = mysql.connector.connect(**db_config)
@@ -102,7 +113,6 @@ def getHistorialAnalisis(user_id):
     cursor.close()
     con.close()
     
-    # Devuelve el historial en formato JSON para AngularJS
     return jsonify({"success": True, "historial": registros})
 
 # =========================================================================
@@ -137,10 +147,7 @@ def getDetalleAnalisis(analysis_id):
 @app.route("/api/analisis/iniciar", methods=["POST"])
 @cross_origin()
 def iniciarAnalisis():
-    # Esta ruta actúa como el punto de contacto entre la SPA y el Procesador de Tareas Asíncronas
-    
-    # Lógica de encolamiento y registro de PENDING
-    
+    # Simula la lógica de encolamiento y registro de PENDING
     return jsonify({"success": True, "message": "Análisis en cola. Vuelva a consultar el historial en un momento."})
 
 

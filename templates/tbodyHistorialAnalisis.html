@@ -1,0 +1,28 @@
+{% for analisis in historiales %}
+    <tr>
+        <td>{{ analisis.id }}</td>
+        
+        <td>{{ analisis.analysis_date }}</td>
+        
+        <td>{{ analisis.tipo_analisis }}</td>
+        
+        <td>
+            {% if analisis.status == 'COMPLETED' %}
+                <span class="badge bg-success">Completado</span>
+            {% elif analisis.status == 'PENDING' %}
+                <span class="badge bg-warning">Pendiente</span>
+            {% else %}
+                <span class="badge bg-danger">Error</span>
+            {% endif %}
+        </td>
+        
+        <td>
+            <button 
+                class="btn btn-sm btn-info btn-ver-recomendacion"
+                data-id="{{ analisis.id }}"
+                data-tipo="{{ analisis.tipo_analisis }}">
+                Ver Recomendación
+            </button>
+        </td>
+    </tr>
+    {% endfor %}

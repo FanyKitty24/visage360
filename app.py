@@ -85,7 +85,7 @@ def cerrarSesion():
     return redirect(url_for("login"))
 
 # =========================================================================
-# MÓDULO EMPLEADOS
+# MÓDULO USUARIOS
 # =========================================================================
 
 @app.route("/empleados")
@@ -161,29 +161,29 @@ def guardarEmpleado():
     return make_response(jsonify({}))
 
 # =========================================================================
-# MÓDULO ASISTENCIAS
+# MÓDULO HISTORIAL DE ANALISIS
 # =========================================================================
 
-@app.route("/asistencias")
+@app.route("/historial_analisis")
 def asistencias():
-    return render_template("asistencias.html")
+    return render_template("historial_analisis.html")
 
-@app.route("/tbodyAsistencias")
-def tbodyAsistencias():
+@app.route("/tbodyHistorialAnalisis")
+def tbodyHistorialAnalisis():
     con = mysql.connector.connect(**db_config)
     cursor = con.cursor(dictionary=True)
 
-    sql    = "SELECT idAsistencia, fecha, comentarios FROM asistencias ORDER BY idAsistencia DESC"
+    sql    = "SELECT id_analysis, user_id, analysis_date, image_url, tipo_analisis, resultado_json, status FROM analysis_history ORDER BY id_analysis DESC"
     cursor.execute(sql)
     registros = cursor.fetchall()
 
     cursor.close()
     con.close()
     
-    return render_template("tbodyAsistencias.html", asistencias=registros)
+    return render_template("tbodyHistorialAnalisis.html", historial_analisis=registros)
 
-@app.route("/asistencia", methods=["POST"])
-def guardarAsistencia():
+@app.route("/historial_analisis", methods=["POST"])
+def guardarHistorialAnalisis():
     con = mysql.connector.connect(**db_config)
     cursor = con.cursor()
     
@@ -202,159 +202,3 @@ def guardarAsistencia():
     pusherAsistencias()
     return make_response(jsonify({}))
 
-# =========================================================================
-# MÓDULO ASISTENCIASPASES (Arquitectura: Dirigida a Eventos)
-# En Pases de Asistencia, en lugar de ejecutarse directamente el CRUD, todo pasa por eventos que desencadenan las operaciones.
-# =========================================================================
-
-@app.route("/asistenciaspases")
-def asistenciaspases():
-    return render_template("asistenciaspases.html")
-
-
-@app.route("/tbodyAsistenciasPases")
-def tbodyAsistenciasPases():
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor(dictionary=True)
-
-    sql = """
-    SELECT 
-        AP.idAsistenciaPase, E.nombreEmpleado, A.fecha AS fechaAsistencia, AP.estado
-    FROM asistenciaspases AS AP
-    INNER JOIN empleados AS E ON E.idEmpleado = AP.idEmpleado
-    INNER JOIN asistencias AS A ON A.idAsistencia = AP.idAsistencia
-    ORDER BY AP.idAsistenciaPase DESC
-    """
-    cursor.execute(sql)
-    registros = cursor.fetchall()
-    
-    cursor.close()
-    con.close()
-    
-    return render_template("tbodyAsistenciasPases.html", asistenciaspases=registros)
-
-
-# =====================================================
-# EVENTO: Registrar un nuevo Pase de Asistencia
-# =====================================================
-@app.route("/asistenciapase", methods=["POST"])
-def registrarAsistenciaPase():
-    idEmpleado   = request.form["idEmpleado"]
-    idAsistencia = request.form["idAsistencia"]
-    estado       = request.form["estado"]
-
-    # 🚀 En lugar de guardar directo, lanzamos un evento
-    pusher_client.trigger("canalPases", "eventoNuevoPase", {
-        "idEmpleado": idEmpleado,
-        "idAsistencia": idAsistencia,
-        "estado": estado
-    })
-
-    return jsonify({"status": "evento_lanzado"})
-
-
-# =====================================================
-# LISTENER: Maneja el evento y guarda en la BD
-# =====================================================
-def manejarEventoPase(data):
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor()
-
-    sql = """
-    INSERT INTO asistenciaspases (idEmpleado, idAsistencia, estado)
-    VALUES (%s, %s, %s)
-    """
-    val = (data["idEmpleado"], data["idAsistencia"], data["estado"])
-
-    cursor.execute(sql, val)
-    con.commit()
-
-    cursor.close()
-    con.close()
-
-
-# =====================================================
-# SUSCRIPCIÓN AL EVENTO
-# =====================================================
-# Simulamos un "listener" dentro del servidor Flask.
-# Nota: Pusher es normalmente cliente → frontend, 
-# pero aquí forzamos el flujo para mostrar arquitectura basada en eventos.
-@app.before_request
-def escuchar_evento_pases():
-    # ⚠️ Aquí podrías integrar un consumidor real si usas colas tipo RabbitMQ o Kafka,
-    # pero para tu práctica basta con simularlo.
-    # Por ejemplo: si detectas un request especial con datos de evento, lo mandas a manejarEventoPase.
-    pass
-
-
-@app.route("/asistenciapase/eliminar", methods=["POST"])
-def eliminarAsistenciaPase():
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor()
-
-    id_pase = request.form["id"]
-    sql     = "DELETE FROM asistenciaspases WHERE idAsistenciaPase = %s"
-    val     = (id_pase,)
-
-    cursor.execute(sql, val)
-    con.commit()
-    
-    cursor.close()
-    con.close()
-
-    return make_response(jsonify({}))
-
-# =========================================================================
-# MÓDULO DEPARTAMENTOS
-# =========================================================================
-
-@app.route("/departamentos")
-def departamentos():
-    return render_template("departamentos.html")
-
-
-@app.route("/departamento", methods=["POST"])
-def guardarDepartamento():
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor()
-
-    idDepartamento     = request.form.get("idDepartamento", "")
-    nombreDepartamento = request.form["txtNombreDepartamento"]
-    edificio           = request.form["txtEdificio"]
-    descripcion        = request.form["txtDescripcion"]
-
-    if idDepartamento:  
-        sql = """
-            UPDATE departamento
-            SET NombreDepartamento = %s, Edificio = %s, Descripcion = %s
-            WHERE idDepartamento = %s
-        """
-        val = (nombreDepartamento, edificio, descripcion, idDepartamento)
-    else:
-        sql = """
-            INSERT INTO departamento (NombreDepartamento, Edificio, Descripcion)
-            VALUES (%s, %s, %s)
-        """
-        val = (nombreDepartamento, edificio, descripcion)
-
-    cursor.execute(sql, val)
-    con.commit()
-
-    cursor.close()
-    con.close()
-
-    return jsonify({"status": "success"})
-
-@app.route("/tbodyDepartamentos")
-def tbodyDepartamentos():
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor(dictionary=True)
-
-    sql = "SELECT idDepartamento, NombreDepartamento, Edificio, Descripcion FROM departamento ORDER BY idDepartamento DESC"
-    cursor.execute(sql)
-    registros = cursor.fetchall()
-
-    cursor.close()
-    con.close()
-    
-    return render_template("tbodyDepartamentos.html", departamentos=registros)

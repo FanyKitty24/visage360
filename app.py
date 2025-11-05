@@ -1,204 +1,168 @@
-# python.exe -m venv .venv
-# cd .venv/Scripts
-# activate.bat
-# py -m ensurepip --upgrade
-# pip install -r requirements.txt
-# pip install bcrypt
-
 from flask import Flask, render_template, request, jsonify, make_response, session, redirect, url_for
 import mysql.connector
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 import pusher
 import bcrypt
+import json
+from functools import wraps # Necesario para el decorador de sesión
 
-# Configuración de la base de datos
+# --- Configuración de la Base de Datos (Adaptar a tus credenciales locales/Render) ---
 db_config = {
-    "host": "185.232.14.52",
-    "database": "u760464709_23005019_bd",
-    "user": "u760464709_23005019_usr",
-    "password": "]0Pxl25["
+    "host": "localhost", # Usar localhost o la IP de Render
+    "database": "visage360_db",
+    "user": "root",
+    "password": ""
 }
 
 app = Flask(__name__)
-CORS(app)
+# Permitir CORS para desarrollo local entre AngularJS y Flask
+CORS(app) 
 
-# CONFIGURACIÓN DE PUSHER
+# Clave secreta para la gestión de sesiones de Flask (debe ser fuerte)
+app.secret_key = "visage360_clave_secreta_fuerte_abc123"
+
+# --- CONFIGURACIÓN DE PUSHER (Se mantiene la funcionalidad de notificaciones) ---
 pusher_client = pusher.Pusher(
-    app_id='2048531',
-    key='686124f7505c58418f23',
-    secret='b5add38751c68986fc11',
-    cluster='us2',
+    app_id='TU_APP_ID',
+    key='TU_KEY',
+    secret='TU_SECRET',
+    cluster='TU_CLUSTER',
     ssl=True
 )
 
-app.secret_key = "pruebaLLaveSecreta_123"
-
-def pusherAsistencias():
-    pusher_client.trigger("canalAsistencias", "eventoAsistencias", {"message": "Nueva asistencia registrada."})
-    return make_response(jsonify({}))
-
-app.secret_key = "pruebaLLaveSecreta_123"
-
 # =========================================================================
-# LOGIN
+# FUNCIONES AUXILIARES
 # =========================================================================
 
-@app.route("/")
-def login():
-    if "idUsuario" in session:
-        return redirect(url_for("index"))
-    return render_template("login.html")
+# Decorador para proteger rutas de la API (solo si usas sesiones de Flask)
+def requiere_login_api(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # En una arquitectura SPA/API RESTful, es mejor validar un token JWT
+        # Por ahora, simulamos la validación simple de la sesión de Flask
+        if "idUsuario" not in session:
+            return jsonify({"message": "No autorizado. Inicie sesión."}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
-@app.route("/IniciarSesion", methods=["POST"])
-def IniciarSesion():
-    usuario_ingresado = request.form.get("txtUsuario")
-    contrasena_ingresada = request.form.get("txtContrasena")
+# =========================================================================
+# LOGIN (Adaptado para devolver JSON a AngularJS)
+# =========================================================================
+
+@app.route("/api/login", methods=["POST"])
+@cross_origin() # Permite la llamada desde el front-end de AngularJS
+def IniciarSesionAPI():
+    # En AngularJS, los datos llegan como JSON, no como request.form
+    data = request.get_json()
+    usuario_ingresado = data.get("email") # Usamos 'email' según la tabla 'usuarios'
+    contrasena_ingresada = data.get("password")
 
     if not usuario_ingresado or not contrasena_ingresada:
-        return "Datos incompletos", 400
+        return jsonify({"success": False, "message": "Datos de acceso incompletos"}), 400
 
     con = mysql.connector.connect(**db_config)
     cursor = con.cursor(dictionary=True)
-    cursor.execute("SELECT idUsuario, username, password FROM usuarios WHERE username = %s", (usuario_ingresado,))
+    # MODIFICACIÓN: Buscar por 'email' y obtener 'id' y 'is_premium'
+    cursor.execute("SELECT id, email, password, is_premium FROM usuarios WHERE email = %s", (usuario_ingresado,))
     registro_usuario = cursor.fetchone()
     con.close()
 
     if registro_usuario:
+        # Nota: El campo 'password' debe ser 'password' en la tabla.
         hash_guardado = registro_usuario['password'].encode('utf-8')
         contrasena_ingresada_bytes = contrasena_ingresada.encode('utf-8')
+        
         if bcrypt.checkpw(contrasena_ingresada_bytes, hash_guardado):
-            session["idUsuario"] = registro_usuario["idUsuario"]
-            session["username"] = registro_usuario["username"]
-            return redirect(url_for("index"))
+            # En la API, se devuelven los datos, AngularJS gestiona el estado (Patrón Singleton)
+            return jsonify({
+                "success": True, 
+                "message": "Inicio de sesión exitoso.",
+                "user": {
+                    "id": registro_usuario["id"],
+                    "email": registro_usuario["email"],
+                    "is_premium": bool(registro_usuario["is_premium"]) # Asegura el valor booleano
+                    # JWT Token real iría aquí
+                }
+            })
 
-    return "Usuario o contraseña incorrectos", 401
-
-@app.route("/index")
-def index():
-    if "idUsuario" not in session:
-        return redirect(url_for("login"))
-    return render_template("index.html")
-
-@app.route("/cerrarSesion")
-def cerrarSesion():
-    session.clear()
-    return redirect(url_for("login"))
+    return jsonify({"success": False, "message": "Correo o contraseña incorrectos"}), 401
 
 # =========================================================================
-# MÓDULO USUARIOS
+# MÓDULO HISTORIAL DE ANALISIS (LECTURA - R del CRUD)
 # =========================================================================
 
-@app.route("/empleados")
-def empleados():
-    # para poderla pasar al formulario.
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor(dictionary=True)
+@app.route("/api/historial_analisis/<int:user_id>", methods=["GET"])
+@cross_origin()
+# En una aplicación real, aquí validaríamos un JWT token en el header
+# @requiere_login_api
+def getHistorialAnalisis(user_id):
     
-    # Consulta para obtener todos los departamentos
-    cursor.execute("SELECT idDepartamento, NombreDepartamento FROM departamento ORDER BY NombreDepartamento ASC")
-    departamentos = cursor.fetchall()
-    
-    cursor.close()
-    con.close()
-    
-    # Pasamos la lista de departamentos a la plantilla
-    return render_template("empleados.html", departamentos=departamentos)
-    
-@app.route("/tbodyEmpleados")
-def tbodyEmpleados():
     con = mysql.connector.connect(**db_config)
     cursor = con.cursor(dictionary=True)
 
-    # MODIFICACIÓN: Se usa INNER JOIN para obtener el nombre del departamento.
-    # Se selecciona E.* (todos los campos de empleados) y D.NombreDepartamento.
+    # MODIFICACIÓN: Traer todos los campos necesarios de la tabla analysis_history
     sql = """
     SELECT 
-        E.idEmpleado, 
-        E.nombreEmpleado, 
-        E.numero, 
-        E.fechaIngreso, 
-        E.idDepartamento,
-        D.NombreDepartamento 
+        id, user_id, analysis_date, tipo_analisis, status, 
+        SUBSTRING(resultado_json, 1, 50) AS resumen_resultado
     FROM 
-        empleados AS E
-    INNER JOIN 
-        departamento AS D ON E.idDepartamento = D.idDepartamento
+        analysis_history 
+    WHERE 
+        user_id = %s 
     ORDER BY 
-        E.idEmpleado DESC
+        analysis_date DESC
     """
-    cursor.execute(sql)
+    cursor.execute(sql, (user_id,))
     registros = cursor.fetchall()
     
     cursor.close()
     con.close()
     
-    return render_template("tbodyEmpleados.html", empleados=registros)
-
-@app.route("/empleado", methods=["POST"])
-def guardarEmpleado():
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor()
-    
-    idEmpleado     = request.form.get("idEmpleado", "")
-    nombreEmpleado = request.form["nombreEmpleado"]
-    numero         = request.form["numero"]
-    fechaIngreso   = request.form["fechaIngreso"]
-    idDepartamento = request.form["idDepartamento"]
-
-    if idEmpleado:
-        sql = "UPDATE empleados SET nombreEmpleado = %s, numero = %s, fechaIngreso = %s, idDepartamento = %s WHERE idEmpleado = %s"
-        val = (nombreEmpleado, numero, fechaIngreso, idDepartamento, idEmpleado)
-    else:
-        sql = "INSERT INTO empleados (nombreEmpleado, numero, fechaIngreso, idDepartamento) VALUES (%s, %s, %s, %s)"
-        val = (nombreEmpleado, numero, fechaIngreso, idDepartamento)
-    
-    cursor.execute(sql, val)
-    con.commit()
-
-    cursor.close()
-    con.close()
-    
-    return make_response(jsonify({}))
+    # Devuelve el historial en formato JSON para AngularJS
+    return jsonify({"success": True, "historial": registros})
 
 # =========================================================================
-# MÓDULO HISTORIAL DE ANALISIS
+# FUNCIÓN DE LECTURA DETALLADA (R adicional)
 # =========================================================================
 
-@app.route("/historial_analisis")
-def asistencias():
-    return render_template("historial_analisis.html")
-
-@app.route("/tbodyHistorialAnalisis")
-def tbodyHistorialAnalisis():
+@app.route("/api/analisis/detalle/<int:analysis_id>", methods=["GET"])
+@cross_origin()
+def getDetalleAnalisis(analysis_id):
     con = mysql.connector.connect(**db_config)
     cursor = con.cursor(dictionary=True)
 
-    sql    = "SELECT id_analysis, user_id, analysis_date, image_url, tipo_analisis, resultado_json, status FROM analysis_history ORDER BY id_analysis DESC"
-    cursor.execute(sql)
-    registros = cursor.fetchall()
-
-    cursor.close()
+    # Se trae todo el JSON de resultado para mostrar el detalle
+    sql = "SELECT resultado_json FROM analysis_history WHERE id = %s"
+    cursor.execute(sql, (analysis_id,))
+    registro = cursor.fetchone()
     con.close()
     
-    return render_template("tbodyHistorialAnalisis.html", historial_analisis=registros)
-
-@app.route("/historial_analisis", methods=["POST"])
-def guardarHistorialAnalisis():
-    con = mysql.connector.connect(**db_config)
-    cursor = con.cursor()
+    if registro:
+        # Se asume que resultado_json es un string JSON válido
+        return jsonify({"success": True, "detalle": json.loads(registro['resultado_json'])})
     
-    fecha      = request.form["fecha"]
-    comentarios = request.form["comentarios"]
+    return jsonify({"success": False, "message": "Análisis no encontrado."}), 404
+
+# =========================================================================
+# SIMULACIÓN DE REGISTRO ASÍNCRONO (Para la futura C del CRUD)
+# =========================================================================
+
+@app.route("/api/analisis/iniciar", methods=["POST"])
+@cross_origin()
+def iniciarAnalisis():
+    # ESTO SIMULA LA FUNCIÓN DE LA API QUE RECIBE LA IMAGEN Y DELEGA
     
-    sql    = "INSERT INTO asistencias (fecha, comentarios) VALUES (%s, %s)"
-    val    = (fecha, comentarios)
+    # Aquí iría la lógica de recepción de la imagen (request.files)
     
-    cursor.execute(sql, val)
-    con.commit()
+    # 1. Validación de Login y permisos
+    # 2. Guardar la imagen en Render/S3
+    # 3. Registrar el estado 'PENDING' en analysis_history
+    # 4. Encolar la tarea en Redis (el 'Procesador de Tareas Asíncronas')
 
-    cursor.close()
-    con.close()
+    # Simulamos el éxito al recibir la solicitud
+    # En un proyecto real con Laravel/PHP, la API respondería inmediatamente:
+    return jsonify({"success": True, "message": "Análisis en cola. Vuelva a consultar el historial en un momento."})
 
-    pusherAsistencias()
-    return make_response(jsonify({}))
 
+if __name__ == "__main__":
+    app.run(debug=True)

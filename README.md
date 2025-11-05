@@ -10,6 +10,6 @@ Servidor: 185.232.14.52
 
 Base de Datos: a264133_visage360_db
 
-Usuario: a264133admin@localhost
+Usuario: 185.232.14.52
 
-Contraseña: 00220024
+Contraseña: 24002200

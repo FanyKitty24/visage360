@@ -52,7 +52,7 @@ def requiere_login_api(f):
 # LOGIN (Lectura de la tabla usuarios)
 # =========================================================================
 
-@app.route("/api/login", methods=["POST"])
+@app.route("/IniciarSesion", methods=["POST"])
 @cross_origin()
 def IniciarSesionAPI():
     data = request.get_json()
@@ -89,7 +89,7 @@ def IniciarSesionAPI():
 # MÓDULO HISTORIAL DE ANALISIS (LECTURA - R del CRUD)
 # =========================================================================
 
-@app.route("/api/historial_analisis/<int:user_id>", methods=["GET"])
+@app.route("/historial_analisis/<int:user_id>", methods=["GET"])
 @cross_origin()
 def getHistorialAnalisis(user_id):
     
@@ -119,7 +119,7 @@ def getHistorialAnalisis(user_id):
 # FUNCIÓN DE LECTURA DETALLADA (R adicional)
 # =========================================================================
 
-@app.route("/api/analisis/detalle/<int:analysis_id>", methods=["GET"])
+@app.route("/analisis/detalle/<int:analysis_id>", methods=["GET"])
 @cross_origin()
 def getDetalleAnalisis(analysis_id):
     con = mysql.connector.connect(**db_config)
@@ -144,7 +144,7 @@ def getDetalleAnalisis(analysis_id):
 # SIMULACIÓN DE REGISTRO ASÍNCRONO (Para la futura C del CRUD)
 # =========================================================================
 
-@app.route("/api/analisis/iniciar", methods=["POST"])
+@app.route("/analisis/iniciar", methods=["POST"])
 @cross_origin()
 def iniciarAnalisis():
     # Simula la lógica de encolamiento y registro de PENDING

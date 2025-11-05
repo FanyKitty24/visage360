@@ -1,15 +1,15 @@
-# Practica1ControlAsistencias
+# Visage360 (En desarrollo)
 
-Pagina: https://practica1controlasistencias-q5m0.onrender.com
+Pagina: ???
 
-Pagina de la DB: https://awos2024.free.nf/dbm
+Pagina de la DB: https://demo.adminer.org/adminer.php?server=&username=&db=a264133_visage360_db
 
 Credenciales ...
 
 Servidor: 185.232.14.52
 
-Base de Datos: u760464709_23005019_bd
+Base de Datos: a264133_visage360_db
 
-Usuario: u760464709_23005019_usr
+Usuario: a264133admin@localhost
 
-Contraseña: ]0Pxl25[
+Contraseña: 00220024

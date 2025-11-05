@@ -1,27 +1,27 @@
-<form id="frmHistorialAnalisis" method="post">
-    <input type="hidden" id="hiddenId" name="id">
-    <div class="mb-1">
-        <label>Fecha</label>
-        <input type="date" class="form-control" id="txtFecha" name="fecha" required>
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">📜 Tu Historial de Asesoría en Visage360</h6>
     </div>
-    <div class="mb-1">
-        <label>Comentarios</label>
-        <textarea class="form-control" id="txtComentarios" name="comentarios"></textarea>
+    <div class="card-body">
+        
+        <div id="loading-indicator" class="alert alert-info text-center" style="display: none;">
+            Cargando tu historial de análisis...
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover table-sm" id="tablaHistorialAnalisis">
+                <thead class="table-primary">
+                    <tr>
+                        <th>ID de Análisis</th>
+                        <th>Fecha y Hora</th>
+                        <th>Tipo de Análisis</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyHistorialAnalisis">
+                    </tbody>
+            </table>
+        </div>
     </div>
-    <div class="mb-1 text-end">
-        <button class="btn btn-primary">Guardar</button>
-    </div>
-</form>
-<div class="table-responsive">
-    <table class="table table-sm">
-        <thead class="table-active">
-            <tr>
-                <th>Id</th>
-                <th>Fecha</th>
-                <th>Comentarios</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="tbodyHistorialAnalisis"></tbody>
-    </table>
 </div>

@@ -23,11 +23,11 @@ app.secret_key = "visage360_clave_secreta_fuerte_abc123"
 
 # --- CONFIGURACIÓN DE PUSHER (Se mantiene la funcionalidad de notificaciones) ---
 pusher_client = pusher.Pusher(
-    app_id='TU_APP_ID',
-    key='TU_KEY',
-    secret='TU_SECRET',
-    cluster='TU_CLUSTER',
-    ssl=True
+  app_id='2073459',
+  key='196b5bf567ba56438181',
+  secret='fc728ccb035c9171e6e7',
+  cluster='us2',
+  ssl=True
 )
 
 # =========================================================================

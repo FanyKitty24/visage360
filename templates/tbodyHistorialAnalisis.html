@@ -1,28 +1,23 @@
-{% for analisis in historiales %}
-    <tr>
-        <td>{{ analisis.id }}</td>
+<tbody id="tbodyHistorialAnalisis">
+    <tr ng-repeat="analisis in historiales">
+        <td>{{ analisis.id_analysis }}</td>
         
-        <td>{{ analisis.analysis_date }}</td>
+        <td>{{ analisis.analysis_date | date:'dd/MM/yyyy HH:mm' }}</td>
         
         <td>{{ analisis.tipo_analisis }}</td>
         
         <td>
-            {% if analisis.status == 'COMPLETED' %}
-                <span class="badge bg-success">Completado</span>
-            {% elif analisis.status == 'PENDING' %}
-                <span class="badge bg-warning">Pendiente</span>
-            {% else %}
-                <span class="badge bg-danger">Error</span>
-            {% endif %}
+            <span class="badge bg-success" ng-if="analisis.status == 'COMPLETED'">Completado</span>
+            <span class="badge bg-warning" ng-if="analisis.status == 'PENDING'">Pendiente</span>
+            <span class="badge bg-danger" ng-if="analisis.status != 'COMPLETED' && analisis.status != 'PENDING'">Error</span>
         </td>
         
         <td>
             <button 
-                class="btn btn-sm btn-info btn-ver-recomendacion"
-                data-id="{{ analisis.id }}"
-                data-tipo="{{ analisis.tipo_analisis }}">
+                class="btn btn-sm btn-info"
+                ng-click="viewDetails(analisis.id_analysis)">
                 Ver Recomendación
             </button>
         </td>
     </tr>
-    {% endfor %}
+</tbody>
